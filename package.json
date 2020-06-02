@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jgkiano/react-native-background-geofencing/tree/master"
+    "url": "https://github.com/OkHi/react-native-background-geofencing/tree/master"
   },
   "bugs": {
-    "url": "https://github.com/jgkiano/react-native-background-geofencing/issues"
+    "url": "https://github.com/OkHi/react-native-background-geofencing/issues"
   },
-  "homepage": "https://github.com/jgkiano/react-native-background-geofencing/tree/master#readme",
+  "homepage": "https://github.com/OkHi/react-native-background-geofencing/tree/master#readme",
   "keywords": [
     "react-native",
     "geofence",
@@ -25,8 +25,8 @@
     "background geofencing"
   ],
   "author": {
-    "name": "Kiano",
-    "email": "jgkiano@gmail.com"
+    "name": "OkHi",
+    "email": "teamokhi@okhi.co"
   },
   "license": "MIT",
   "licenseFilename": "LICENSE",
