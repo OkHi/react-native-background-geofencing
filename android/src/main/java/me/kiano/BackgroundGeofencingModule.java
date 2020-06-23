@@ -1,6 +1,9 @@
 package me.kiano;
 
+import android.content.Intent;
+import android.os.Bundle;
 import android.os.Handler;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.facebook.react.bridge.Promise;
@@ -15,15 +18,20 @@ import java.util.ArrayList;
 
 import me.kiano.database.RNGeofenceDB;
 import me.kiano.interfaces.RNGeofenceHandler;
+import me.kiano.interfaces.RNLocationServicesRequestHandler;
 import me.kiano.models.RNGeofence;
 import me.kiano.models.RNGeofenceWebhookConfiguration;
+import me.kiano.models.RNLocationServicesSettings;
 import me.kiano.models.RNNotification;
 
 public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
     private String TAG = "BackgroundGeofencing";
 
+    private RNGeofenceDB db;
+
     public BackgroundGeofencingModule(ReactApplicationContext reactContext) {
         super(reactContext);
+        this.db = new RNGeofenceDB(reactContext);
     }
 
     @Override
@@ -32,7 +40,7 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void add(ReadableMap geoFence, final Promise promise) {
+    public void add(final ReadableMap geoFence, final Promise promise) {
         try {
 
             if (!RNGeofence.hasLocationPermission(getReactApplicationContext())) {
@@ -41,25 +49,39 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
             }
 
             if (!RNGeofence.isLocationServicesEnabled(getReactApplicationContext())) {
-                promise.reject("location_services_disabled", "Location services are disabled");
-                return;
+                RNLocationServicesSettings rnLocationServicesSettings = new RNLocationServicesSettings(getCurrentActivity(), getReactApplicationContext(), new RNLocationServicesRequestHandler() {
+                    @Override
+                    public void onSuccess() {
+                        addGeofences(geoFence, promise);
+                    }
+
+                    @Override
+                    public void onError() {
+                        promise.reject("location_services_disabled", "Location services are disabled");
+                        return;
+                    }
+                });
+                rnLocationServicesSettings.showLocationServicesRequestDialog();
+            } else {
+                addGeofences(geoFence, promise);
             }
-
-            final RNGeofence rnGeofence = new RNGeofence(getReactApplicationContext(), geoFence);
-
-            rnGeofence.start(true, rnGeofence.setInitialTriggers, new RNGeofenceHandler() {
-                @Override
-                public void onSuccess(String geofenceId) {
-                    promise.resolve(geofenceId);
-                }
-                @Override
-                public void onError(String geofenceId, Exception e) {
-                    promise.reject("geofence_exception", "Failed to start geofence service for id: " + rnGeofence.id, e);
-                }
-            });
         } catch (Exception e) {
             promise.reject("geofence_exception", "Failed to start geofence service for id: " + geoFence.getString("id"), e);
         }
+    }
+
+    private void addGeofences(ReadableMap geoFence, final Promise promise) {
+        final RNGeofence rnGeofence = new RNGeofence(getReactApplicationContext(), geoFence);
+        rnGeofence.start(true, rnGeofence.setInitialTriggers, new RNGeofenceHandler() {
+            @Override
+            public void onSuccess(String geofenceId) {
+                promise.resolve(geofenceId);
+            }
+            @Override
+            public void onError(String geofenceId, Exception e) {
+                promise.reject("geofence_exception", "Failed to start geofence service for id: " + rnGeofence.id, e);
+            }
+        });
     }
 
     @ReactMethod
@@ -103,6 +125,9 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
                 RNGeofenceWebhookConfiguration rnGeofenceWebhookConfiguration = new RNGeofenceWebhookConfiguration(webhook);
                 rnGeofenceWebhookConfiguration.save(getReactApplicationContext());
             }
+            if (configuration.hasKey("jsTask")) {
+                db.saveJSTask();
+            }
             promise.resolve(true);
         } catch (JSONException e) {
             promise.reject("geofence_exception", e.getMessage());
@@ -122,7 +147,6 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     public void init() {
-        final RNGeofenceDB db = new RNGeofenceDB(getReactApplicationContext());
         ArrayList<RNGeofence> geofences = db.getAllErrorGeofences();
 
         if (geofences.isEmpty()) {
@@ -163,7 +187,6 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
     @ReactMethod
     public void restart() {
         if (RNGeofence.hasLocationPermission(getReactApplicationContext()) && RNGeofence.isLocationServicesEnabled(getReactApplicationContext())) {
-            final RNGeofenceDB db = new RNGeofenceDB(getReactApplicationContext());
             ArrayList<RNGeofence> geofences = db.getAllGeofences();
             if (geofences.isEmpty()) {
                 return;
@@ -185,6 +208,12 @@ public class BackgroundGeofencingModule extends ReactContextBaseJavaModule {
                 });
             }
         }
+    }
+
+    @ReactMethod
+    public void openLocationServicesSettings() {
+        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        getReactApplicationContext().startActivityForResult(intent, 516, new Bundle());
     }
 
 }

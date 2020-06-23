@@ -68,6 +68,10 @@ export const isLocationServicesEnabled = () => {
   return BackgroundGeofencing.isLocationServicesEnabled();
 };
 
+export const openLocationServicesSettings = () => {
+  BackgroundGeofencing.openLocationServicesSettings();
+};
+
 export default {
   async add(geofence = {}) {
     const {id, lat, lng} = geofence;
@@ -116,6 +120,7 @@ export default {
         config['webhook'] = {...defaultWebhookConfiguration, ...webhook};
       }
       if (typeof task === 'function') {
+        config['jsTask'] = {hasJSTask: true};
         AppRegistry.registerHeadlessTask('OnGeoFenceEventJavaScript', () => {
           return async ({event, data}) => {
             try {
